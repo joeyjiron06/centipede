@@ -9,37 +9,65 @@
 import SpriteKit
 
 class GameScene: SKScene {
+	
+	
+	let kShipSize = CGSize(width:45, height:45)
+	let kBulletSize = CGSize(width:5, height:10)
+
+	struct SceneObjNames {
+		let kCentipedeNode = "cent-node"
+	}
+	
+	private var mSpaceShip : SKSpriteNode!
+	private var mCentipede : SKNode!
+	
     override func didMoveToView(view: SKView) {
         /* Setup your scene here */
-        let myLabel = SKLabelNode(fontNamed:"Chalkduster")
-        myLabel.text = "Hello, World!";
-        myLabel.fontSize = 65;
-        myLabel.position = CGPoint(x:CGRectGetMidX(self.frame), y:CGRectGetMidY(self.frame));
-        
-        self.addChild(myLabel)
+		setupSpaceShip()
+		
+		mCentipede = createCentipede()
+		addChild(mCentipede)
     }
     
     override func touchesBegan(touches: NSSet, withEvent event: UIEvent) {
-        /* Called when a touch begins */
-        
-        for touch: AnyObject in touches {
-            let location = touch.locationInNode(self)
-            
-            let sprite = SKSpriteNode(imageNamed:"Spaceship")
-            
-            sprite.xScale = 0.5
-            sprite.yScale = 0.5
-            sprite.position = location
-            
-            let action = SKAction.rotateByAngle(CGFloat(M_PI), duration:1)
-            
-            sprite.runAction(SKAction.repeatActionForever(action))
-            
-            self.addChild(sprite)
-        }
+		fire(mSpaceShip.position)
     }
    
     override func update(currentTime: CFTimeInterval) {
         /* Called before each frame is rendered */
     }
+	
+	//MARK: scene setup
+	
+	private func setupSpaceShip() {
+		let scale : CGFloat = 0.25
+		let x : CGFloat = size.width/2.0
+		let y : CGFloat = kShipSize.height/2 + 20
+		
+		mSpaceShip = SKSpriteNode(imageNamed:"Spaceship")
+		mSpaceShip.size = kShipSize
+		mSpaceShip.position = CGPoint(x:x, y:y)
+		addChild(mSpaceShip)
+	}
+	
+	private func createCentipede() -> SKShapeNode {
+		let radius : CGFloat = 10
+		let centipede = SKShapeNode(circleOfRadius:radius)
+		centipede.position = CGPoint(x:radius/2, y:size.height+radius/2)
+		centipede.fillColor = UIColor.greenColor()
+		return centipede
+	}
+	
+	private func fire(startPosition:CGPoint) {
+		let bullet = SKShapeNode(rectOfSize: kBulletSize)
+		bullet.fillColor = UIColor.purpleColor()
+		bullet.position = startPosition
+		
+		let moveAction = SKAction.moveToY(size.height+kBulletSize.height, duration: 2.0)
+		let removeAction = SKAction.removeFromParent()
+		SKAction.sequence([moveAction, removeAction])
+		bullet.runAction(moveAction)
+		
+		addChild(bullet)
+	}
 }
