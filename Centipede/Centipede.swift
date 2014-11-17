@@ -27,8 +27,7 @@ class Centipede {
 	
 	func addToScene(scene:SKScene) {
 		for (i, segment) in enumerate(model.segments) {
-			let node = segment.getNode()
-			scene.addChild(node)
+			scene.addChild(segment)
 		}
 	}
 	
@@ -42,7 +41,6 @@ class Centipede {
 
 	func move(direction:Direction) {
 		let head = getHead()
-		let node = head.getNode()
 		
 		for segment in model.segments {
 			if segment === head {
@@ -75,73 +73,69 @@ class Centipede {
 	}
 	
 	//TODO make it extend node
-	class Segment {
-		private let imageName : String
+	class Segment : SKSpriteNode {
 		private var direction : Direction
-		private let skNode : SKSpriteNode
 		private let nextSegment : Segment?
 		
-		init(size:CGSize, imageName:String, direction:Direction, position:CGPoint, nextSegment:Segment?) {
-			self.imageName = imageName
+		init(imageNamed:String, direction:Direction, nextSegment:Segment?) {
+			let texture = SKTexture(imageNamed:imageNamed)
 			self.direction = direction
 			self.nextSegment = nextSegment
-			skNode = SKSpriteNode(imageNamed: imageName)
-			skNode.size = size
-			skNode.position = position
-			skNode.physicsBody = SKPhysicsBody(circleOfRadius:skNode.size.width/2)
-			skNode.userData = NSMutableDictionary()
-			skNode.userData?.setValue(self, forKey: "segment")
+			super.init(texture: texture, color: UIColor.clearColor(), size: texture.size())
+		}
+
+		required init(coder aDecoder: NSCoder) {
+			//TODO decode segment
+			direction = Direction.None
+			super.init(coder: aDecoder)
 		}
 		
-		func setPosition(position:CGPoint) {
-			self.skNode.position = position
+		override func encodeWithCoder(aCoder: NSCoder) {
+			//TODO encode segment
+	        super.encodeWithCoder(aCoder)
 		}
-		
-		func getNode() -> SKSpriteNode {
-			return skNode
-		}
+	
 		
 		func getNext() -> Segment? {
 			return nextSegment
 		}
 		
 		func move(directions:[Direction]) {
-    		let node = getNode()
 			//cancel animations
-			node.removeAllActions()
+			removeAllActions()
 			
 			var actions = [SKAction]()
 			
 			for direction in directions {
         		switch direction {
     			case .Right:
-					let destX = node.scene!.size.width
+					let destX = scene!.size.width
     				let angle = Angle.Degrees(0)
-					actions.append(createMoveAction(direction, node:node, dest: destX, angle:angle, animUpDown: false))
+					actions.append(createMoveAction(direction, dest: destX, angle:angle, animUpDown: false))
     				break
     				
     			case .Left:
     				let destX = CGFloat(0)
     				let angle = Angle.Degrees(-180)
-					actions.append(createMoveAction(direction, node:node, dest: destX, angle:angle, animUpDown: false))
+					actions.append(createMoveAction(direction, dest: destX, angle:angle, animUpDown: false))
     				break
     				
     			case .Down:
 					//TODO clean up
-					let gameScene = node.scene? as GameScene
-					let (i, j) = gameScene.pointToPosition(node.position)
+					let gameScene = scene? as GameScene
+					let (i, j) = gameScene.pointToPosition(position)
 					let destPos = gameScene.positionToPoint(i-1, j:j)
     				let angle = Angle.Degrees(-90)
-					actions.append(createMoveAction(direction, node:node, dest:destPos.y, angle:angle, animUpDown:true))
+					actions.append(createMoveAction(direction, dest:destPos.y, angle:angle, animUpDown:true))
     				break
 					
     			case .Up:
 					//TODO clean up
-					let gameScene = node.scene? as GameScene
-					let (i, j) = gameScene.pointToPosition(node.position)
+					let gameScene = scene? as GameScene
+					let (i, j) = gameScene.pointToPosition(position)
 					let destPos = gameScene.positionToPoint(i+1, j: j)
     				let angle = Angle.Degrees(90)
-					actions.append(createMoveAction(direction, node:node, dest:destPos.y, angle:angle, animUpDown:true))
+					actions.append(createMoveAction(direction, dest:destPos.y, angle:angle, animUpDown:true))
     				break
 					
     			default:
@@ -149,23 +143,23 @@ class Centipede {
         		}
 			}
 			
-    		node.runAction(SKAction.sequence(actions))
+    		runAction(SKAction.sequence(actions))
 		}
 		
 		func getDirection() -> Direction {
 			return direction
 		}
     	
-		private func createMoveAction(direction:Direction, node:SKSpriteNode, dest:CGFloat, angle:Angle, animUpDown:Bool) -> SKAction {
+		private func createMoveAction(direction:Direction, dest:CGFloat, angle:Angle, animUpDown:Bool) -> SKAction {
     		let rotate = SKAction.rotateToAngle(CGFloat(angle.radians.value), duration: 0.25)
     		var move : SKAction!
     		
     		if animUpDown {
-				let dist = fabs(dest - node.position.y)
+				let dist = fabs(dest - position.y)
     			let time = dist/CentipedeContants.kSpeed
     			move = SKAction.moveToY(dest, duration:NSTimeInterval(time))
     		} else {
-    			let dist = fabs(dest - node.position.x)
+    			let dist = fabs(dest - position.x)
     			let time = dist/CentipedeContants.kSpeed
     			move = SKAction.moveToX(dest, duration:NSTimeInterval(time))
     		}

@@ -13,21 +13,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 	
 	let TAG = "GameScene"
 
+	//TODO move to constants
 	let kShipSize = CGSize(width:45, height:45)
 	let kBulletSize = CGSize(width:5, height:10)
 	let kNumberOfMushroomsInWidth = 20
 	var kMushroomSize : CGSize!
 	let kCentipedeNumNodes = 1
-	
-	struct PhysicsCategory {
-		static let None : UInt32 = 0
-		static let All : UInt32 = UInt32.max
-		static let Segment : UInt32 = 1
-		static let Bounds : UInt32 = (1 << 1)
-		static let Mushroom : UInt32 = (1 << 2)
-		
-		static let SegmentAndMushroom =  Segment | Mushroom
-	}
 	
 	private enum Bound : UInt8 {
 		case Left = 0b1
@@ -72,10 +63,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 		
 		// Now make the edges of the screen a physics object as well
 		self.physicsBody = SKPhysicsBody(edgeLoopFromRect:self.view!.frame)
-		self.physicsBody?.categoryBitMask = PhysicsCategory.Bounds
-		self.physicsBody?.contactTestBitMask = PhysicsCategory.Segment
-		self.physicsBody?.collisionBitMask = PhysicsCategory.None
-	
+		self.physicsBody?.categoryBitMask = Categories.Bounds
+		self.physicsBody?.contactTestBitMask = Categories.Segment
+		self.physicsBody?.collisionBitMask = Categories.None
 	}
     
     override func touchesBegan(touches: NSSet, withEvent event: UIEvent) {
@@ -127,23 +117,22 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 			for j in 1..<maxCols-1 {
 				let topLeftNeighbor = nodeAtPoint(positionToPoint(i-1, j: j-1))
 				let topRightNeightbor =  nodeAtPoint(positionToPoint(i-1, j: j+1))
-				let shouldAdd : Bool = (topLeftNeighbor.physicsBody?.categoryBitMask != PhysicsCategory.Mushroom)//TODO: use better id
-										&& (topRightNeightbor.physicsBody?.categoryBitMask != PhysicsCategory.Mushroom)
+				let shouldAdd : Bool = (topLeftNeighbor.physicsBody?.categoryBitMask != Categories.Mushroom)//TODO: use better id
+										&& (topRightNeightbor.physicsBody?.categoryBitMask != Categories.Mushroom)
 										&& randBool(20)
 				
 				if shouldAdd {
-            		let mushroom = Mushroom(imageName:Mushrooms.Full)
-            		let node = mushroom.getNode()
-            		node.size = kMushroomSize
-					node.setScale(0.75)
-					node.name = Mushrooms.Full
-					node.physicsBody = SKPhysicsBody(texture:SKTexture(imageNamed:"mushroom-physicsbody"), size: node.size)
-					node.physicsBody?.dynamic = false
-					node.physicsBody?.categoryBitMask = PhysicsCategory.Mushroom
-					node.physicsBody?.contactTestBitMask = PhysicsCategory.Segment
-					node.physicsBody?.collisionBitMask = PhysicsCategory.None
-            		node.position = positionToPoint(i, j:j)
-            		addChild(node)
+            		let mushroom = Mushroom(imageNamed:Mushrooms.Full)
+            		mushroom.size = kMushroomSize
+					mushroom.setScale(0.75)
+					mushroom.name = Mushrooms.Full
+					mushroom.physicsBody = SKPhysicsBody(texture:SKTexture(imageNamed:"mushroom-physicsbody"), size: mushroom.size)
+					mushroom.physicsBody?.dynamic = false
+					mushroom.physicsBody?.categoryBitMask = Categories.Mushroom
+					mushroom.physicsBody?.contactTestBitMask = Categories.Segment
+					mushroom.physicsBody?.collisionBitMask = Categories.None
+            		mushroom.position = positionToPoint(i, j:j)
+            		addChild(mushroom)
 				}
 			}
 		}
@@ -208,13 +197,16 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 			let y = startPoint.y
 			let position = CGPoint(x: x, y: y)
 			
-			let segment = Centipede.Segment(size:kMushroomSize, imageName: CentipedeContants.kSegmentImageName, direction:Direction.None, position:position, nextSegment:prevSegment)
-			segment.getNode().name = SceneObjNames.kSegment
-			segment.getNode().physicsBody?.dynamic = true
-			segment.getNode().physicsBody?.categoryBitMask = PhysicsCategory.Segment
-			segment.getNode().physicsBody?.contactTestBitMask = PhysicsCategory.Bounds
-			segment.getNode().physicsBody?.collisionBitMask = PhysicsCategory.None
-			segment.getNode().physicsBody?.usesPreciseCollisionDetection = true
+			let segment = Centipede.Segment(imageNamed:CentipedeContants.kSegmentImageName, direction:Direction.None, nextSegment:prevSegment)
+			segment.size = kMushroomSize
+			segment.position = position
+			segment.name = SceneObjNames.kSegment
+			segment.physicsBody = SKPhysicsBody(circleOfRadius: segment.size.width/2)
+			segment.physicsBody?.dynamic = true
+			segment.physicsBody?.categoryBitMask = Categories.Segment
+			segment.physicsBody?.contactTestBitMask = Categories.Bounds
+			segment.physicsBody?.collisionBitMask = Categories.None
+			segment.physicsBody?.usesPreciseCollisionDetection = true
 			
 			prevSegment = segment
 
@@ -256,54 +248,23 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 		return node
 	}
 	
-	//TODO remove
-	private func findSegment(contact:SKPhysicsContact) -> Centipede.Segment? {
-		var segmentNode : SKNode? = findNode(PhysicsCategory.Segment, contact:contact)
-		var segment : Centipede.Segment?
-		
-		if segmentNode != nil {
-			segment = segmentNode!.userData!.objectForKey("segment") as? Centipede.Segment
-		}
-		
-		return segment
-	}
-	
-	//TODO remove
-	private func findSegmentBound(contact:SKPhysicsContact) -> (segment:Centipede.Segment?, bound:SKNode?) {
-		var segmentNode : SKNode? = findNode(PhysicsCategory.Segment, contact:contact)
-		var bound : SKNode? = findNode(PhysicsCategory.Bounds, contact: contact)
-		
-		var segment : Centipede.Segment?
-		
-		if segmentNode != nil {
-			segment = segmentNode!.userData!.objectForKey("segment") as? Centipede.Segment
-		}
-		
-		return (segment, bound)
-	}
-
 /* - SKPhysicsContactDelegate */
 	
 	func didBeginContact(contact: SKPhysicsContact) {
 		
-		let (segment, bound) = findSegmentBound(contact)
-
-	
-		if segment != nil && bound != nil {
-			segmentDidCollideWithBound(segment!, bound:bound!, point:contact.contactPoint)
-		}
-		
-		
 		let contactBitMask = contact.bodyA.categoryBitMask | contact.bodyB.categoryBitMask
 		
-		
-		if contactBitMask == PhysicsCategory.SegmentAndMushroom {
-			let segment = findSegment(contact)
-			let mushroom = findNode(PhysicsCategory.Mushroom, contact: contact)
-			segmentDidCollideWithMushroom(segment!, mushroom: mushroom!, point:contact.contactPoint)
+		if contactBitMask == Categories.Segment | Categories.Mushroom {
+			let segment = findNode(Categories.Segment, contact: contact) as Centipede.Segment
+			let mushroom = findNode(Categories.Mushroom, contact: contact)
+			segmentDidCollideWithMushroom(segment, mushroom: mushroom!, point:contact.contactPoint)
+
+		} else if contactBitMask == Categories.Segment | Categories.Bounds {
+			
+			let segment = findNode(Categories.Segment, contact: contact) as Centipede.Segment
+			let bound = findNode(Categories.Bounds, contact: contact)!
+			segmentDidCollideWithBound(segment, bound:bound, point: contact.contactPoint)
 		}
-		
-		
 	}
 	
 /* - Collided Functions */
@@ -330,11 +291,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 		}
 		
 		if bound != nil {
-			let node = segment.getNode()
 			
 			switch bound! {
 			case Bound.Right.toRaw(), Bound.Left.toRaw():
-				let canMoveDown = node.position.y-node.size.height >= 0
+				let canMoveDown = segment.position.y-segment.size.height >= 0
 				if canMoveDown {
     				segment.move([Direction.Down, segment.getDirection().getOpposite()])
 				} else {
@@ -343,7 +303,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 				break
 				
 			case Bound.Top.toRaw(), Bound.Bottom.toRaw():
-				let canMoveLeft = node.position.x-node.size.width >= 0
+				let canMoveLeft = segment.position.x-segment.size.width >= 0
 				if canMoveLeft {
     				segment.move([Direction.Left])
 				} else {

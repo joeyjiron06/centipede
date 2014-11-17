@@ -10,6 +10,7 @@
 		7A5819C51A184603001A6E48 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5819C41A184603001A6E48 /* Logger.swift */; };
 		7A5819C71A186C0B001A6E48 /* Mushroom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5819C61A186C0B001A6E48 /* Mushroom.swift */; };
 		7A5819C91A187262001A6E48 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7A5819C81A187262001A6E48 /* Images.xcassets */; };
+		7A6F415D1A19D4F700BA4350 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A6F415C1A19D4F700BA4350 /* Constants.swift */; };
 		7AB66E961A11908500D3F177 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AB66E951A11908500D3F177 /* AppDelegate.swift */; };
 		7AB66E9A1A11908500D3F177 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AB66E991A11908500D3F177 /* GameScene.swift */; };
 		7AB66E9C1A11908500D3F177 /* GameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AB66E9B1A11908500D3F177 /* GameViewController.swift */; };
@@ -35,6 +36,7 @@
 		7A5819C41A184603001A6E48 /* Logger.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
 		7A5819C61A186C0B001A6E48 /* Mushroom.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Mushroom.swift; sourceTree = "<group>"; };
 		7A5819C81A187262001A6E48 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
+		7A6F415C1A19D4F700BA4350 /* Constants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		7AB66E901A11908500D3F177 /* Centipede.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Centipede.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7AB66E941A11908500D3F177 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7AB66E951A11908500D3F177 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -68,6 +70,34 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		7A6F415E1A19D52100BA4350 /* game */ = {
+			isa = PBXGroup;
+			children = (
+				7A5819C61A186C0B001A6E48 /* Mushroom.swift */,
+				7AB66EC11A15AC3800D3F177 /* Direction.swift */,
+				7A6F415C1A19D4F700BA4350 /* Constants.swift */,
+				7AB66EBD1A11DE1000D3F177 /* Centipede.swift */,
+				7AB66E991A11908500D3F177 /* GameScene.swift */,
+			);
+			name = game;
+			sourceTree = "<group>";
+		};
+		7A6F415F1A19D55400BA4350 /* utils */ = {
+			isa = PBXGroup;
+			children = (
+				7A5819C41A184603001A6E48 /* Logger.swift */,
+			);
+			name = utils;
+			sourceTree = "<group>";
+		};
+		7A6F41601A19D56500BA4350 /* math */ = {
+			isa = PBXGroup;
+			children = (
+				7AB66EC51A15C2F500D3F177 /* Angle.swift */,
+			);
+			name = math;
+			sourceTree = "<group>";
+		};
 		7AB66E871A11908500D3F177 = {
 			isa = PBXGroup;
 			children = (
@@ -90,13 +120,10 @@
 			isa = PBXGroup;
 			children = (
 				7AB66E951A11908500D3F177 /* AppDelegate.swift */,
-				7AB66EC51A15C2F500D3F177 /* Angle.swift */,
-				7AB66EBD1A11DE1000D3F177 /* Centipede.swift */,
-				7AB66EC11A15AC3800D3F177 /* Direction.swift */,
-				7AB66E991A11908500D3F177 /* GameScene.swift */,
 				7AB66E9B1A11908500D3F177 /* GameViewController.swift */,
-				7A5819C41A184603001A6E48 /* Logger.swift */,
-				7A5819C61A186C0B001A6E48 /* Mushroom.swift */,
+				7A6F415E1A19D52100BA4350 /* game */,
+				7A6F41601A19D56500BA4350 /* math */,
+				7A6F415F1A19D55400BA4350 /* utils */,
 				7AB66E9D1A11908500D3F177 /* Main.storyboard */,
 				7A5819C81A187262001A6E48 /* Images.xcassets */,
 				7AB66EA21A11908500D3F177 /* LaunchScreen.xib */,
@@ -238,6 +265,7 @@
 				7A5819C51A184603001A6E48 /* Logger.swift in Sources */,
 				7AB66EC21A15AC3800D3F177 /* Direction.swift in Sources */,
 				7AB66EBE1A11DE1000D3F177 /* Centipede.swift in Sources */,
+				7A6F415D1A19D4F700BA4350 /* Constants.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

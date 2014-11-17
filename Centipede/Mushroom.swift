@@ -13,16 +13,5 @@ struct Mushrooms {
 	static let Full = "mushroom"
 }
 
-class Mushroom {
-	
-	private let node : SKSpriteNode
-	
-	
-	init(imageName:String) {
-		node = SKSpriteNode(imageNamed:imageName)
-	}
-	
-	func getNode() -> SKSpriteNode {
-		return node
-	}
+class Mushroom : SKSpriteNode {
 }
