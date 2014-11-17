@@ -20,11 +20,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 	var kMushroomSize : CGSize!
 	let kCentipedeNumNodes = 1
 	
-	private enum Bound : UInt8 {
-		case Left = 0b1
-		case Right = 0b10
-		case Top = 0b100
-		case Bottom = 0b1000
+	private struct Bound {
+		static let Left = UInt8(0x1)
+		static let Right = UInt8(0x1 << 1)
+		static let Top = UInt8(0x1 << 2)
+		static let Bottom = UInt8(0x1 << 3)
 	}
 	
 	struct SceneObjNames {
@@ -271,39 +271,39 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 	
 	
 	private func segmentDidCollideWithBound(segment:Centipede.Segment, bound:SKNode, point:CGPoint) {
-		let threshold = CGFloat(3)//TODO change threshold to use segment size
-		var bound : UInt8?
+		var bound : UInt8 = 0
 		
-		if point.x == 0 || point.x < threshold {
-			bound = Bound.Left.toRaw()
+		if point.x == 0 || point.x < segment.size.width {
+			bound = Bound.Left
 		}
 		
-		if point.x == size.width || point.x > size.width-threshold {
-			bound = (bound == nil) ? Bound.Right.toRaw() : (bound! | Bound.Right.toRaw())
+		if point.x == size.width || point.x > size.width-segment.size.width {
+			bound |= Bound.Right
 		}
 		
-		if point.y == 0 || point.y < threshold {
-			bound = (bound == nil) ? Bound.Bottom.toRaw() : (bound! | Bound.Bottom.toRaw())
+		if point.y == 0 || point.y < segment.size.height/2 {
+			bound |= Bound.Bottom
 		}
 		
-		if point.y == size.height || point.y > size.height - threshold {
-			bound = (bound == nil) ? Bound.Top.toRaw() : (bound! | Bound.Top.toRaw())
+		if point.y == size.height || point.y > size.height - segment.size.height/2 {
+			bound |= Bound.Top
 		}
 		
-		if bound != nil {
-			
-			switch bound! {
-			case Bound.Right.toRaw(), Bound.Left.toRaw():
-				let canMoveDown = segment.position.y-segment.size.height >= 0
+		if bound != 0 {
+			switch bound {
+			case Bound.Right, Bound.Left:
+				let canMoveDown = segment.canMoveDownOnCollide() && segment.position.y-segment.size.height >= 0
 				if canMoveDown {
     				segment.move([Direction.Down, segment.getDirection().getOpposite()])
 				} else {
-					segment.move([Direction.Up])
+					segment.move([Direction.Up, segment.getDirection().getOpposite()])
 				}
 				break
 				
-			case Bound.Top.toRaw(), Bound.Bottom.toRaw():
+			case (Bound.Top|Bound.Right), (Bound.Bottom|Bound.Right), (Bound.Top|Bound.Left), (Bound.Bottom|Bound.Left):
 				let canMoveLeft = segment.position.x-segment.size.width >= 0
+				let isBottomTouched = (bound & Bound.Bottom) == Bound.Bottom
+				segment.setMoveDownOnCollide(!isBottomTouched)
 				if canMoveLeft {
     				segment.move([Direction.Left])
 				} else {
@@ -314,20 +314,21 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 				break
 			}
 		} else {
-			Logger.log(TAG, message: "segmentDidCollideWithBound:" + "bound is nil")
+			Logger.log(TAG, message: "segmentDidCollideWithBound:" + "bound is 0")
 		}
 	}
 	
 	private func segmentDidCollideWithMushroom(segment:Centipede.Segment, mushroom:SKNode, point:CGPoint) {
 		let mushroomPoint = mushroom.position
 		let direction = segment.getDirection()
+		let firstMove = segment.canMoveDownOnCollide() ? Direction.Down : Direction.Up
 		
 		switch (direction) {
 		case Direction.Left:
-			segment.move([Direction.Down, direction.getOpposite()])
+			segment.move([firstMove, direction.getOpposite()])
 			break
 		case Direction.Right:
-			segment.move([Direction.Down, direction.getOpposite()])
+			segment.move([firstMove, direction.getOpposite()])
 			break
 			
 		case Direction.Up:

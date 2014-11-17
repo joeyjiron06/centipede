@@ -76,6 +76,7 @@ class Centipede {
 	class Segment : SKSpriteNode {
 		private var direction : Direction
 		private let nextSegment : Segment?
+		private var downOnCollide = true
 		
 		init(imageNamed:String, direction:Direction, nextSegment:Segment?) {
 			let texture = SKTexture(imageNamed:imageNamed)
@@ -99,6 +100,14 @@ class Centipede {
 		func getNext() -> Segment? {
 			return nextSegment
 		}
+	
+		func setMoveDownOnCollide(value:Bool) {
+			downOnCollide = value
+		}
+		
+		func canMoveDownOnCollide() -> Bool {
+			return downOnCollide
+		}
 		
 		func move(directions:[Direction]) {
 			//cancel animations
@@ -109,33 +118,35 @@ class Centipede {
 			for direction in directions {
         		switch direction {
     			case .Right:
-					let destX = scene!.size.width
+					let pos = CGPoint(x: scene!.size.width, y:position.y)
     				let angle = Angle.Degrees(0)
-					actions.append(createMoveAction(direction, dest: destX, angle:angle, animUpDown: false))
+					actions.append(createMoveAction(direction, destPoint: pos, angle:angle))
     				break
     				
     			case .Left:
-    				let destX = CGFloat(0)
-    				let angle = Angle.Degrees(-180)
-					actions.append(createMoveAction(direction, dest: destX, angle:angle, animUpDown: false))
+					let pos = CGPoint(x:CGFloat(0+size.width/2), y:position.y)
+    				let angle = Angle.Degrees(180)
+					actions.append(createMoveAction(direction, destPoint:pos, angle:angle))
     				break
     				
     			case .Down:
 					//TODO clean up
 					let gameScene = scene? as GameScene
 					let (i, j) = gameScene.pointToPosition(position)
-					let destPos = gameScene.positionToPoint(i-1, j:j)
-    				let angle = Angle.Degrees(-90)
-					actions.append(createMoveAction(direction, dest:destPos.y, angle:angle, animUpDown:true))
+					var pos = gameScene.positionToPoint(i-1, j:j)
+					pos.y = max(0+size.height/2, pos.y)
+    				let angle = Angle.Degrees(270)
+					actions.append(createMoveAction(direction, destPoint:pos, angle:angle))
     				break
 					
     			case .Up:
 					//TODO clean up
 					let gameScene = scene? as GameScene
 					let (i, j) = gameScene.pointToPosition(position)
-					let destPos = gameScene.positionToPoint(i+1, j: j)
+					var pos = gameScene.positionToPoint(i+1, j: j)
+					pos.y = min(gameScene.size.height-size.height/2, pos.y)
     				let angle = Angle.Degrees(90)
-					actions.append(createMoveAction(direction, dest:destPos.y, angle:angle, animUpDown:true))
+					actions.append(createMoveAction(direction, destPoint:pos, angle:angle))
     				break
 					
     			default:
@@ -150,18 +161,18 @@ class Centipede {
 			return direction
 		}
     	
-		private func createMoveAction(direction:Direction, dest:CGFloat, angle:Angle, animUpDown:Bool) -> SKAction {
-    		let rotate = SKAction.rotateToAngle(CGFloat(angle.radians.value), duration: 0.25)
+		private func createMoveAction(direction:Direction, destPoint:CGPoint, angle:Angle) -> SKAction {
+			let rotate = SKAction.rotateToAngle(CGFloat(angle.radians.value), duration: 0.0625, shortestUnitArc:true)
     		var move : SKAction!
     		
-    		if animUpDown {
-				let dist = fabs(dest - position.y)
+    		if destPoint.y != position.y {
+				let dist = fabs(destPoint.y - position.y)
     			let time = dist/CentipedeContants.kSpeed
-    			move = SKAction.moveToY(dest, duration:NSTimeInterval(time))
+    			move = SKAction.moveToY(destPoint.y, duration:NSTimeInterval(time))
     		} else {
-    			let dist = fabs(dest - position.x)
+    			let dist = fabs(destPoint.x - position.x)
     			let time = dist/CentipedeContants.kSpeed
-    			move = SKAction.moveToX(dest, duration:NSTimeInterval(time))
+    			move = SKAction.moveToX(destPoint.x, duration:NSTimeInterval(time))
     		}
 			
 			let setDirection = SKAction.runBlock({
