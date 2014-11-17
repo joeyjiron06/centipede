@@ -12,8 +12,7 @@ import SpriteKit
 struct CentipedeContants {
 	static let NAME = "Centipede"
 	static let kSegmentImageName = "segment"
-	static let kSegmentSize = CGSize(width:20, height:20)
-	static let kSpeed = CGFloat(100)
+	static let kSpeed = CGFloat(150)
 }
 
 
@@ -47,11 +46,11 @@ class Centipede {
 		
 		for segment in model.segments {
 			if segment === head {
-				segment.move(direction)
+				segment.move([direction])
 			} else {
 				switch segment.direction {
 					case .None:
-						segment.move(direction)
+						segment.move([direction])
 						break
 					
 					default:
@@ -75,18 +74,19 @@ class Centipede {
 		}
 	}
 	
+	//TODO make it extend node
 	class Segment {
 		private let imageName : String
 		private var direction : Direction
 		private let skNode : SKSpriteNode
 		private let nextSegment : Segment?
 		
-		init(imageName:String, direction:Direction, position:CGPoint, nextSegment:Segment?) {
+		init(size:CGSize, imageName:String, direction:Direction, position:CGPoint, nextSegment:Segment?) {
 			self.imageName = imageName
 			self.direction = direction
 			self.nextSegment = nextSegment
 			skNode = SKSpriteNode(imageNamed: imageName)
-			skNode.size = CentipedeContants.kSegmentSize
+			skNode.size = size
 			skNode.position = position
 			skNode.physicsBody = SKPhysicsBody(circleOfRadius:skNode.size.width/2)
 			skNode.userData = NSMutableDictionary()
@@ -115,27 +115,33 @@ class Centipede {
 			for direction in directions {
         		switch direction {
     			case .Right:
-					let destX = 1000 - node.size.width/2 //TODO: move by vector
+					let destX = node.scene!.size.width
     				let angle = Angle.Degrees(0)
 					actions.append(createMoveAction(direction, node:node, dest: destX, angle:angle, animUpDown: false))
     				break
     				
     			case .Left:
-    				let destX = CGFloat(0 + node.size.width/2)
+    				let destX = CGFloat(0)
     				let angle = Angle.Degrees(-180)
 					actions.append(createMoveAction(direction, node:node, dest: destX, angle:angle, animUpDown: false))
     				break
     				
     			case .Down:
-    				let destY = CGFloat(node.position.y - node.size.height)
+					//TODO clean up
+					let gameScene = node.scene? as GameScene
+					let (i, j) = gameScene.pointToPosition(node.position)
+					let destPos = gameScene.positionToPoint(i-1, j:j)
     				let angle = Angle.Degrees(-90)
-					actions.append(createMoveAction(direction, node:node, dest:destY, angle:angle, animUpDown:true))
+					actions.append(createMoveAction(direction, node:node, dest:destPos.y, angle:angle, animUpDown:true))
     				break
 					
     			case .Up:
-					let destY = CGFloat(node.position.y + node.size.height)
+					//TODO clean up
+					let gameScene = node.scene? as GameScene
+					let (i, j) = gameScene.pointToPosition(node.position)
+					let destPos = gameScene.positionToPoint(i+1, j: j)
     				let angle = Angle.Degrees(90)
-					actions.append(createMoveAction(direction, node:node, dest:destY, angle:angle, animUpDown:true))
+					actions.append(createMoveAction(direction, node:node, dest:destPos.y, angle:angle, animUpDown:true))
     				break
 					
     			default:
@@ -149,18 +155,13 @@ class Centipede {
 		func getDirection() -> Direction {
 			return direction
 		}
-		
-    	func move(direction:Direction) {
-			move([direction])
-    	}
     	
 		private func createMoveAction(direction:Direction, node:SKSpriteNode, dest:CGFloat, angle:Angle, animUpDown:Bool) -> SKAction {
     		let rotate = SKAction.rotateToAngle(CGFloat(angle.radians.value), duration: 0.25)
     		var move : SKAction!
     		
-    		CGVector.zeroVector
     		if animUpDown {
-    			let dist = fabs(dest - node.position.y)
+				let dist = fabs(dest - node.position.y)
     			let time = dist/CentipedeContants.kSpeed
     			move = SKAction.moveToY(dest, duration:NSTimeInterval(time))
     		} else {
@@ -173,7 +174,7 @@ class Centipede {
 				self.direction = direction
 			})
 
-			return SKAction.group([setDirection, rotate, move])
+			return SKAction.sequence([setDirection, SKAction.group([rotate, move])])
     	}
 	}
 }

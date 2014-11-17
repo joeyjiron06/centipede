@@ -91,16 +91,16 @@
 			children = (
 				7AB66E951A11908500D3F177 /* AppDelegate.swift */,
 				7AB66EC51A15C2F500D3F177 /* Angle.swift */,
-				7A5819C61A186C0B001A6E48 /* Mushroom.swift */,
+				7AB66EBD1A11DE1000D3F177 /* Centipede.swift */,
+				7AB66EC11A15AC3800D3F177 /* Direction.swift */,
 				7AB66E991A11908500D3F177 /* GameScene.swift */,
 				7AB66E9B1A11908500D3F177 /* GameViewController.swift */,
-				7AB66E9D1A11908500D3F177 /* Main.storyboard */,
-				7AB66EBD1A11DE1000D3F177 /* Centipede.swift */,
-				7A5819C81A187262001A6E48 /* Images.xcassets */,
 				7A5819C41A184603001A6E48 /* Logger.swift */,
+				7A5819C61A186C0B001A6E48 /* Mushroom.swift */,
+				7AB66E9D1A11908500D3F177 /* Main.storyboard */,
+				7A5819C81A187262001A6E48 /* Images.xcassets */,
 				7AB66EA21A11908500D3F177 /* LaunchScreen.xib */,
 				7AB66E931A11908500D3F177 /* Supporting Files */,
-				7AB66EC11A15AC3800D3F177 /* Direction.swift */,
 			);
 			path = Centipede;
 			sourceTree = "<group>";
