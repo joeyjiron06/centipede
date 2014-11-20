@@ -20,5 +20,5 @@ struct Categories {
 }
 
 struct Names {
-	
+	static let Mushroom = "mushroom"
 }

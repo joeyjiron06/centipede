@@ -9,9 +9,5 @@
 import Foundation
 import SpriteKit
 
-struct Mushrooms {
-	static let Full = "mushroom"
-}
-
 class Mushroom : SKSpriteNode {
 }
