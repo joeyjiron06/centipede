@@ -13,11 +13,14 @@ struct CentipedeContants {
 	static let NAME = "Centipede"
 	static let kSegmentImageName = "segment"
 	static let kSpeed = CGFloat(150)
+	static let kSpeedPerMove = 0.125
 }
 
 
 class Centipede {
+	private let DEBUG_MOVES = false
 
+	private let TAG = "Centipede"
 	
 	private let model : Model
 	
@@ -38,27 +41,210 @@ class Centipede {
 	private func getTail() -> Segment {
 		return model.segments.last!
 	}
-
-	func move(direction:Direction) {
+	
+	func startMoving(direction:Direction) {
 		let head = getHead()
 		
-		for segment in model.segments {
-			if segment === head {
-				segment.move([direction])
-			} else {
-				switch segment.direction {
-					case .None:
-						segment.move([direction])
-						break
-					
-					default:
-						println("not moving segment")
-						break
+		if head.direction != direction {
+    		cancelAnims()
+			
+    		head.direction = direction
+    		
+    		nextMove()
+		} else if DEBUG_MOVES {
+    		nextMove()
+		}
+	}
+	
+	private func nextMove() {
+		//TODO refactor to use repeat action forever!
+		
+		let moves = createNextMoves()
+		
+		for (i, move) in enumerate(moves) {
+			if i==0 {
+				if DEBUG_MOVES {
+					model.segments[i].runAction(move)
+				} else {
+					model.segments[i].runAction(move, completion: self.nextMove)
 				}
+			} else {
+				model.segments[i].runAction(move)
 			}
 		}
 	}
 	
+	private func cancelAnims() {
+		for segment in model.segments {
+			segment.removeAllActions()
+		}
+	}
+	
+	private func createNextMoves() -> [SKAction] {
+		let head = getHead()
+		
+		var moves = [SKAction]()
+		
+		for segment in model.segments {
+			if segment === head {
+				let move = findNextMove(segment)
+				moves.append(move)
+			} else {
+				let nextSegment = segment.getNext()
+				let move = makeMoveToSegment(segment, toSegment:nextSegment!)
+				moves.append(move)
+			}
+		}
+		
+		return moves
+	}
+	
+	private func makeMoveToSegment(fromSegment:Segment, toSegment:Segment) -> SKAction {
+		let scene = fromSegment.scene as GameScene
+		let (row, col) = scene.pointToPosition(toSegment.position)
+		let point = scene.positionToPoint(row, j: col)
+		let move = fromSegment.createMoveAction(toSegment.getDirection(), dest: point)
+		return move
+	}
+
+	private func findNextMove(segment:Segment) -> SKAction {
+		var nextMove : SKAction
+		
+		switch segment.direction {
+		case Direction.Down, Direction.Up:
+			//TODO take care of case when moving down or up just once, then left or right
+			nextMove = makeMoveInOppsiteIfPossible(segment)
+			break
+		
+		default:
+			if isMovePossible(segment, direction:segment.getDirection()) {
+				nextMove = makeMoveInDirection(segment, direction: segment.getDirection())
+			} else {
+				nextMove = makeMoveInBestDirection(segment)
+			}
+			break
+		}
+		
+		return nextMove
+	}
+	
+	private func makeMoveInOppsiteIfPossible(segment:Segment) -> SKAction {
+		var move : SKAction?
+		
+		if segment.mostRelevantPrevDirection != nil {
+			var direction = segment.mostRelevantPrevDirection!.getOpposite()
+			
+			if isMovePossible(segment, direction:direction) {
+				move = makeMoveInDirection(segment, direction:direction)
+			} else {
+				direction = segment.mostRelevantPrevDirection!
+				
+				if isMovePossible(segment, direction: direction)  {
+					move = makeMoveInDirection(segment, direction: direction)
+				}
+			}
+		}
+		
+		if move == nil {
+			move = makeMoveInBestDirection(segment)
+		}
+		
+		return move!
+	}
+	
+	private func isMovePossible(segment:Segment, direction:Direction) -> Bool {
+		return !willCollideIfMovesInDirection(segment, direction: direction)
+				&& willStayInBounds(segment, direction: direction)
+	}
+	
+	private func makeMoveInDirection(segment:Segment, direction:Direction) -> SKAction {
+		let point = nextPoint(segment, direction: direction)
+		return segment.createMoveAction(direction, dest: point)
+	}
+	
+	private func makeMoveInDirection(segment:Segment, direction:Direction, doneBlock:dispatch_block_t?) -> SKAction {
+		let point = nextPoint(segment, direction:direction)
+		let move = segment.createMoveAction(direction, dest: point)
+		if doneBlock != nil {
+			return SKAction.sequence([move, SKAction.runBlock(doneBlock!)])
+		} else {
+			return move
+		}
+	}
+	
+	private func willCollideIfMovesInDirection(segment:Segment, direction:Direction) -> Bool {
+		let scene = segment.scene!
+		let point = nextPoint(segment, direction:direction)
+		let node = scene.nodeAtPoint(point)
+		return node.name == Names.Mushroom || node.name == Names.Segment
+	}
+	
+	private func willStayInBounds(segment:Segment, direction:Direction) -> Bool {
+		let scene = segment.scene
+		let point = nextPoint(segment, direction:direction)
+		return point.x >= segment.size.width/2 && point.x < scene?.size.width
+			&& point.y >= segment.size.height/2 && point.y < scene?.size.height
+	}
+	
+	private func isPointInBounds(point:CGPoint, scene:SKScene) -> Bool {
+		return point.x >= 0 && point.x < scene.size.width
+			&& point.y >= 0 && point.y < scene.size.height
+	}
+	
+	private func nextPoint(segment:Segment, direction:Direction) -> CGPoint {
+		let scene = segment.scene as GameScene
+		let (row, col) = scene.pointToPosition(segment.position)
+
+		switch direction {
+		case .Left:
+			return scene.positionToPoint(row, j: col-1)
+		case .Right:
+			return scene.positionToPoint(row, j: col+1)
+		case .Up:
+			return scene.positionToPoint(row+1, j: col)
+		case .Down:
+			return scene.positionToPoint(row-1, j: col)
+		default:
+			fatalError("unhandeled direction")
+		}
+	}
+	
+	private func makeMoveInBestDirection(segment:Segment) -> SKAction {
+		let direction = segment.getDirectionOnCollide()
+		
+		switch direction {
+		case Direction.Left, Direction.Right:
+			let point = nextPoint(segment, direction:direction)
+			let move = segment.createMoveAction(direction, dest: point)
+			return move
+			
+		case Direction.Down, Direction.Up:
+			
+			if isMovePossible(segment, direction: direction) {
+				return makeMoveInDirection(segment, direction: direction)
+			}
+			
+			if isMovePossible(segment, direction: Direction.Right) {
+				let setDirOnCollide = { segment.setDirectionOnCollide(direction.getOpposite()) }
+				return makeMoveInDirection(segment, direction: Direction.Right, doneBlock:nil)
+			}
+			
+			if isMovePossible(segment, direction: Direction.Left) {
+				let setDirOnCollide = { segment.setDirectionOnCollide(direction.getOpposite()) }
+				return makeMoveInDirection(segment, direction: Direction.Left, doneBlock:nil)
+			}
+			
+			if isMovePossible(segment, direction: direction.getOpposite()) {
+				let setDirOnCollide = { segment.setDirectionOnCollide(direction.getOpposite()) }
+				return makeMoveInDirection(segment, direction: direction.getOpposite(), doneBlock:setDirOnCollide)
+			}
+			
+			
+		default:
+			break
+		}
+		fatalError("could not find best move!")
+	}
 	
 /* - Model */
 	
@@ -74,6 +260,7 @@ class Centipede {
 	
 	class Segment : SKSpriteNode {
 		private var direction : Direction
+		private var mostRelevantPrevDirection : Direction?
 		private let nextSegment : Segment?
 		private var directionOnCollide = Direction.Down
 		
@@ -95,96 +282,64 @@ class Centipede {
 	        super.encodeWithCoder(aCoder)
 		}
 	
-		
-		func getNext() -> Segment? {
-			return nextSegment
-		}
-	
-		func setDirectionOnCollide(direction:Direction) {
-			directionOnCollide = direction
-		}
-		
-		func getDirectionOnCollide() -> Direction {
-			return directionOnCollide
-		}
-		
-		func move(directions:[(direction:Direction, dest:CGFloat)]) {
-			
-		}
-		
-		func move(directions:[Direction]) {
-			//cancel animations
-			removeAllActions()
-			
-			var actions = [SKAction]()
-			
-			for direction in directions {
-        		switch direction {
-    			case .Right:
-					let x = scene!.size.width
-    				let angle = Angle.Degrees(0)
-					actions.append(createMoveAction(direction, dest:x, angle:angle))
-    				break
-    				
-    			case .Left:
-					let x = CGFloat(0+size.width/2)
-    				let angle = Angle.Degrees(180)
-					actions.append(createMoveAction(direction, dest:x, angle:angle))
-    				break
-    				
-    			case .Down:
-					//TODO clean up
-					let gameScene = scene? as GameScene
-					let (i, j) = gameScene.pointToPosition(position)
-					var pos = gameScene.positionToPoint(i-1, j:j)
-					let y = max(0+size.height/2, pos.y)
-    				let angle = Angle.Degrees(270)
-					actions.append(createMoveAction(direction, dest:y, angle:angle))
-    				break
-					
-    			case .Up:
-					//TODO clean up
-					let gameScene = scene? as GameScene
-					let (i, j) = gameScene.pointToPosition(position)
-					var pos = gameScene.positionToPoint(i+1, j: j)
-					let y = min(gameScene.size.height-size.height/2, pos.y)
-    				let angle = Angle.Degrees(90)
-					actions.append(createMoveAction(direction, dest:y, angle:angle))
-    				break
-					
-    			default:
-    				break
-        		}
-			}
-			
-    		runAction(SKAction.sequence(actions))
-		}
-		
 		func getDirection() -> Direction {
 			return direction
 		}
-    	
-		func createMoveAction(direction:Direction, dest:CGFloat, angle:Angle) -> SKAction {
-			let rotate = SKAction.rotateToAngle(CGFloat(angle.radians.value), duration: 0.0625, shortestUnitArc:true)
+	
+		private func getNext() -> Segment? {
+			return nextSegment
+		}
+		
+		private func setDirectionOnCollide(direction:Direction) {
+			directionOnCollide = direction
+		}
+		
+		private func getDirectionOnCollide() -> Direction {
+			return directionOnCollide
+		}
+		
+		private func directionToAngle(direction:Direction) -> Angle {
+			switch direction {
+			case .Left:
+				return Angle.Degrees(-180)
+			case .Right:
+				return Angle.Degrees(0)
+			case .Up:
+				return Angle.Degrees(90)
+			case .Down:
+				return Angle.Degrees(-90)
+			default:
+				return Angle.Degrees(0)
+			}
+		}
+		
+		private func isRevelevatPrevDirection(direction:Direction) -> Bool {
+			return direction == Direction.Left || direction == Direction.Right
+		}
+		
+		private func createMoveAction(direction:Direction, dest:CGPoint) -> SKAction {
     		var move : SKAction!
     		
     		if direction == Direction.Down || direction == Direction.Up {
-				let dist = fabs(dest - position.y)
-    			let time = dist/CentipedeContants.kSpeed
-    			move = SKAction.moveToY(dest, duration:NSTimeInterval(time))
+				let time = CentipedeContants.kSpeedPerMove
+				move = SKAction.moveToY(dest.y, duration:NSTimeInterval(time))
     		} else if direction == Direction.Left || direction == Direction.Right {
-    			let dist = fabs(dest - position.x)
-    			let time = dist/CentipedeContants.kSpeed
-    			move = SKAction.moveToX(dest, duration:NSTimeInterval(time))
+				let time = CentipedeContants.kSpeedPerMove
+				move = SKAction.moveToX(dest.x, duration:NSTimeInterval(time))
 			} else {
 				fatalError("Segment : unhandled direction")
 			}
 			
 			let setDirection = SKAction.runBlock({
+				if self.isRevelevatPrevDirection(self.direction) {
+					self.mostRelevantPrevDirection = self.direction
+				}
 				self.direction = direction
 			})
-
-			return SKAction.sequence([setDirection, SKAction.group([rotate, move])])
+			
+			let angle = CGFloat(directionToAngle(direction).radians.value)
+			let rotate = SKAction.rotateToAngle(angle, duration: 0.0625, shortestUnitArc:true)
+			return SKAction.sequence([setDirection, SKAction.group([rotate, move]) ])
     	}
 	}
 }

@@ -21,4 +21,5 @@ struct Categories {
 
 struct Names {
 	static let Mushroom = "mushroom"
+	static let Segment = "segment"
 }

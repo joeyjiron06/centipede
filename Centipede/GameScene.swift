@@ -18,7 +18,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 	let kBulletSize = CGSize(width:5, height:10)
 	let kNumberOfMushroomsInWidth = 20
 	var kMushroomSize : CGSize!
-	let kCentipedeNumNodes = 1
+	let kCentipedeNumNodes = 2
 	
 	private struct Bound {
 		static let Left = UInt8(0x1)
@@ -59,7 +59,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 		kMushroomSize = CGSize(width:size , height:size)
 		
 		self.physicsWorld.gravity = CGVector.zeroVector
-		self.physicsWorld.contactDelegate = self
 		
 		// Now make the edges of the screen a physics object as well
 		self.physicsBody = SKPhysicsBody(edgeLoopFromRect:self.view!.frame)
@@ -90,7 +89,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 	}
 	
 	private func onDirection(direction:Direction) {
-		mCentipede.move(direction)
+		mCentipede.startMoving(direction)
 	}
 
 	func positionToPoint(i:Int, j:Int) -> CGPoint {
@@ -116,7 +115,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 	
 /* - Create Methods */
 	
-	private func createMushrooms() {
+	private func createDebugMushrooms() {
 		let maxRows = getMaxRows()
 		let maxCols = getMaxCols()
 		
@@ -149,34 +148,37 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 		mushroom.physicsBody?.collisionBitMask = Categories.None
 		mushroom.position = positionToPoint(31, j:maxCols/2+2)
 		addChild(mushroom)
+	}
+	
+	private func createMushrooms() {
+		let maxRows = getMaxRows()
+		let maxCols = getMaxCols()
 		
-		
-		
-//		let buffer = 3
-//
-//		for i in buffer..<maxRows-buffer {
-//			for j in 1..<maxCols-1 {
-//				let topLeftNeighbor = nodeAtPoint(positionToPoint(i-1, j: j-1))
-//				let topRightNeightbor =  nodeAtPoint(positionToPoint(i-1, j: j+1))
-//				let shouldAdd : Bool = (topLeftNeighbor.physicsBody?.categoryBitMask != Categories.Mushroom)//TODO: use better id
-//										&& (topRightNeightbor.physicsBody?.categoryBitMask != Categories.Mushroom)
-//										&& randBool(20)
-//				
-//				if shouldAdd {
-//            		let mushroom = Mushroom(imageNamed:"mushroom")
-//            		mushroom.size = kMushroomSize
-//					mushroom.setScale(0.75)
-//					mushroom.name = Names.Mushroom
-//					mushroom.physicsBody = SKPhysicsBody(texture:SKTexture(imageNamed:"mushroom-physicsbody"), size: mushroom.size)
-//					mushroom.physicsBody?.dynamic = false
-//					mushroom.physicsBody?.categoryBitMask = Categories.Mushroom
-//					mushroom.physicsBody?.contactTestBitMask = Categories.Segment
-//					mushroom.physicsBody?.collisionBitMask = Categories.None
-//            		mushroom.position = positionToPoint(i, j:j)
-//            		addChild(mushroom)
-//				}
-//			}
-//		}
+		let buffer = 3
+
+		for i in buffer..<maxRows-buffer {
+			for j in 1..<maxCols-1 {
+				let topLeftNeighbor = nodeAtPoint(positionToPoint(i-1, j: j-1))
+				let topRightNeightbor =  nodeAtPoint(positionToPoint(i-1, j: j+1))
+				let shouldAdd : Bool = (topLeftNeighbor.physicsBody?.categoryBitMask != Categories.Mushroom)//TODO: use better id
+										&& (topRightNeightbor.physicsBody?.categoryBitMask != Categories.Mushroom)
+										&& randBool(20)
+				
+				if shouldAdd {
+            		let mushroom = Mushroom(imageNamed:"mushroom")
+            		mushroom.size = kMushroomSize
+					mushroom.setScale(0.75)
+					mushroom.name = Names.Mushroom
+					mushroom.physicsBody = SKPhysicsBody(texture:SKTexture(imageNamed:"mushroom-physicsbody"), size: mushroom.size)
+					mushroom.physicsBody?.dynamic = false
+					mushroom.physicsBody?.categoryBitMask = Categories.Mushroom
+					mushroom.physicsBody?.contactTestBitMask = Categories.Segment
+					mushroom.physicsBody?.collisionBitMask = Categories.None
+            		mushroom.position = positionToPoint(i, j:j)
+            		addChild(mushroom)
+				}
+			}
+		}
 	}
 	
 	private func randBool(percentChance:UInt32) -> Bool {
@@ -186,20 +188,27 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 	
 	//TODO: remove arrows and function
 	private func createArrows() {
-		up = newSpaceShip(CGPoint(x:80, y:kShipSize.height/2 + 70))
+		up = newArrow(CGPoint(x:80, y:kShipSize.height/2 + 70))
 		addChild(up)
 		
-		down = newSpaceShip(CGPoint(x:80, y:kShipSize.height/2 + 10))
+		down = newArrow(CGPoint(x:80, y:kShipSize.height/2 + 10))
 		down.zRotation = CGFloat(Angle.Degrees(-180).radians.value)
 		addChild(down)
 		
-		left = newSpaceShip(CGPoint(x:40, y:kShipSize.height/2 + 40))
+		left = newArrow(CGPoint(x:40, y:kShipSize.height/2 + 40))
 		left.zRotation = CGFloat(Angle.Degrees(90).radians.value)
 		addChild(left)
 
-		right = newSpaceShip(CGPoint(x:120, y:kShipSize.height/2 + 40))
+		right = newArrow(CGPoint(x:120, y:kShipSize.height/2 + 40))
 		right.zRotation = CGFloat(Angle.Degrees(-90).radians.value)
 		addChild(right)
+	}
+	
+	private func newArrow(position:CGPoint) -> SKSpriteNode {
+		let spaceShip = SKSpriteNode(imageNamed:"arrow")
+		spaceShip.size = kShipSize
+		spaceShip.position = position
+		return spaceShip
 	}
 	
 	private func newSpaceShip(position:CGPoint) -> SKSpriteNode {
@@ -241,7 +250,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 			let segment = Centipede.Segment(imageNamed:CentipedeContants.kSegmentImageName, direction:Direction.None, nextSegment:prevSegment)
 			segment.size = kMushroomSize
 			segment.position = position
-			segment.name = SceneObjNames.kSegment
+			segment.name = Names.Segment
 			segment.physicsBody = SKPhysicsBody(circleOfRadius: segment.size.width/2)
 			segment.physicsBody?.dynamic = true
 			segment.physicsBody?.categoryBitMask = Categories.Segment
@@ -277,88 +286,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 		addChild(bullet)
 	}
 	
-	private func findNode(category:UInt32, contact:SKPhysicsContact) -> SKNode? {
-		var node : SKNode?
-		
-		if category == contact.bodyA.categoryBitMask {
-			node = contact.bodyA.node
-		} else if category == contact.bodyB.categoryBitMask {
-			node = contact.bodyB.node
-		}
-		
-		return node
-	}
-	
-/* - SKPhysicsContactDelegate */
-	
-	func didBeginContact(contact: SKPhysicsContact) {
-		
-		let contactBitMask = contact.bodyA.categoryBitMask | contact.bodyB.categoryBitMask
-		
-		if contactBitMask == Categories.Segment | Categories.Mushroom {
-			let segment = findNode(Categories.Segment, contact: contact) as Centipede.Segment
-			let mushroom = findNode(Categories.Mushroom, contact: contact)
-			segmentDidCollideWithMushroom(segment, mushroom: mushroom!, point:contact.contactPoint)
-		} else if contactBitMask == Categories.Segment | Categories.Bounds {
-			let segment = findNode(Categories.Segment, contact: contact) as Centipede.Segment
-			let bound = findNode(Categories.Bounds, contact: contact)!
-			segmentDidCollideWithBound(segment, boundNode:bound, point: contact.contactPoint)
-		}
-	}
-	
-/* - Collided Functions */
-	
-	
-	private func segmentDidCollideWithBound(segment:Centipede.Segment, boundNode:SKNode, point:CGPoint) {
-		var bound : UInt8 = 0
-		
-		if point.x == 0 || point.x < segment.size.width {
-			bound = Bound.Left
-		}
-		
-		if point.x == size.width || point.x > size.width-segment.size.width {
-			bound |= Bound.Right
-		}
-		
-		if point.y == 0 || point.y < segment.size.height/2 {
-			bound |= Bound.Bottom
-		}
-		
-		if point.y == size.height || point.y > size.height - segment.size.height/2 {
-			bound |= Bound.Top
-		}
-		
-		if bound != 0 {
-			switch bound {
-			case Bound.Right, Bound.Left:
-				let willBeInBoundsOnDownMove = segment.position.y-segment.size.height >= 0
-				let canMoveDown = segment.getDirectionOnCollide()==Direction.Down && willBeInBoundsOnDownMove
-				//TODO check if move will be out of bounds
-				if canMoveDown {
-    				segment.move([Direction.Down, segment.getDirection().getOpposite()])
-				} else {
-					segment.move([Direction.Up, segment.getDirection().getOpposite()])
-				}
-				break
-				
-				//TODO cleanup bound check
-			case (Bound.Top|Bound.Right), (Bound.Bottom|Bound.Right), (Bound.Top|Bound.Left), (Bound.Bottom|Bound.Left):
-				let canMoveLeft = segment.position.x-segment.size.width >= 0
-				let isBottomTouched = (bound & Bound.Bottom) == Bound.Bottom
-				segment.setDirectionOnCollide(isBottomTouched ? Direction.Up : Direction.Down)
-				if canMoveLeft {
-    				segment.move([Direction.Left])
-				} else {
-					segment.move([Direction.Right])
-				}
-				break
-			default:
-				break
-			}
-		} else {
-			Logger.log(TAG, message: "segmentDidCollideWithBound:" + "bound is 0")
-		}
-	}
 	
 	private func isOccupied(row:Int, col:Int) -> Bool {
 		var point = positionToPoint(row, j: col)
@@ -366,153 +293,4 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 		print("\(node.name)")
 		return node.name != Names.Mushroom // only mushrooms can occupy a space
 	}
-	
-	private func getMoves(segment:Centipede.Segment, row:Int, col:Int, directionToMove:Direction) -> SKAction? {
-		var r = row
-		var c = col
-		var moves : SKAction?
-		
-	
-		switch directionToMove {
-		case Direction.Left:
-			c = col-1
-			if !isOccupied(r, col: c) {
-				let y = positionToPoint(row, j: c).y
-				let x = CGFloat(0)
-				
-				let moveDown = segment.createMoveAction(Direction.Down, dest: y, angle: Angle.Degrees(270))
-				let moveLeft = segment.createMoveAction(Direction.Left, dest: x, angle: Angle.Degrees(180))
-	
-				moves = SKAction.sequence([moveDown, moveLeft])
-			}
-			break
-			
-		case Direction.Right:
-			c = col + 1
-			if !isOccupied(r, col: c) {
-				let y = positionToPoint(row, j: c).y
-				let x = positionToPoint(row, j: getMaxRows()).x
-				
-				let moveDown = segment.createMoveAction(Direction.Down, dest: y, angle: Angle.Degrees(270))
-				let moveRight = segment.createMoveAction(Direction.Right, dest: x, angle: Angle.Degrees(0))
-				
-				moves = SKAction.sequence([moveDown, moveRight])
-			}
-			break
-			
-		case Direction.Down:
-			r = row-1
-			break
-			
-		case Direction.Up:
-			r = row+1
-			break
-			
-		default:
-			break
-		}
-		
-		return moves
-	}
-	
-	
-	
-	/*
-	* Searches the scene for the next best move for the given segment to avoid collisions in the given direction
-	* @return an action to run, nil if no move was found
-	*/
-	private func findNextMove(segment:Centipede.Segment) -> SKAction? {
-		let (i, j) = pointToPosition(segment.position)
-		let point = positionToPoint(i, j: j)
-		let directionToSearch = segment.getDirectionOnCollide()
-		let oppositeDirection = segment.getDirection().getOpposite()
-		
-		println("segment (r:\(i), c:\(j)) (x:\(segment.position.x), y:\(segment.position.y))")
-		
-		var moves : SKAction?
-        //TODO refactor
-		
-		switch directionToSearch {
-		case Direction.Down, Direction.Up:
-			
-			let maxRows = getMaxRows()
-			var row : Int = (directionToSearch == Direction.Down) ? (i-1) : (i+1)
-			
-			//search for a way out
-			while (row >= 0 && row < maxRows) {
-				
-				var move = getMoves(segment, row: row, col: j, directionToMove: oppositeDirection)
-				
-				if move == nil {
-					move = getMoves(segment, row: row, col: j, directionToMove: directionToSearch)
-				}
-				
-				if move != nil {
-					moves = move
-					break
-				}
-				
-				if directionToSearch == Direction.Down {
-     				row--
-				} else {
-					row++
-				}
-			}
-			
-			break
-			
-		default:
-			break
-		}
-		
-		return moves
-	}
-	
-	
-	private func segmentDidCollideWithMushroom(segment:Centipede.Segment, mushroom:SKNode, point:CGPoint) {
-		let direction = segment.getDirection()
-		let directionOnCollide = segment.getDirectionOnCollide()
-		
-		if direction == Direction.Down || direction == Direction.Up {
-			//FIXME remove hack
-			return
-		}
-		
-		switch (direction) {
-		case Direction.Left, Direction.Right:
-			//TODO position segment properly
-			
-			let moves = findNextMove(segment)
-			
-			if moves != nil {
-				segment.removeAllActions()
-				segment.runAction(moves)
-			} else {
-        		let firstMove = segment.getDirectionOnCollide()
-    			segment.move([firstMove, direction.getOpposite()])
-				Logger.log(TAG, message: "segmentDidCollideWithMushroom: not moves found!")
-			}
-			
-			break
-			
-//		case Direction.Right:
-//			//TODO position segment properly
-//    		let firstMove = segment.getDirectionOnCollide()
-//			segment.move([firstMove, direction.getOpposite()])
-//			break
-			
-		case Direction.Up:
-			segment.move([Direction.Left])
-			break
-			
-		case Direction.Down:
-			segment.move([Direction.Left])
-			break
-			
-		default:
-			break
-		}
-
-	}
-	
 }
