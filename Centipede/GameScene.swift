@@ -18,7 +18,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 	let kBulletSize = CGSize(width:5, height:10)
 	let kNumberOfMushroomsInWidth = 20
 	var kMushroomSize : CGSize!
-	let kCentipedeNumNodes = 2
+	let kCentipedeNumNodes = 7
 	
 	private struct Bound {
 		static let Left = UInt8(0x1)
@@ -160,8 +160,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 			for j in 1..<maxCols-1 {
 				let topLeftNeighbor = nodeAtPoint(positionToPoint(i-1, j: j-1))
 				let topRightNeightbor =  nodeAtPoint(positionToPoint(i-1, j: j+1))
-				let shouldAdd : Bool = (topLeftNeighbor.physicsBody?.categoryBitMask != Categories.Mushroom)//TODO: use better id
-										&& (topRightNeightbor.physicsBody?.categoryBitMask != Categories.Mushroom)
+				let shouldAdd : Bool = (topLeftNeighbor.name != Names.Mushroom)
+										&& (topRightNeightbor.name != Names.Mushroom)
 										&& randBool(20)
 				
 				if shouldAdd {
@@ -247,7 +247,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 			let y = startPoint.y
 			let position = CGPoint(x: x, y: y)
 			
-			let segment = Centipede.Segment(imageNamed:CentipedeContants.kSegmentImageName, direction:Direction.None, nextSegment:prevSegment)
+			let segment = Centipede.Segment(imageNamed:CentipedeContants.kSegmentImageName, direction:Direction.Right, nextSegment:prevSegment)
 			segment.size = kMushroomSize
 			segment.position = position
 			segment.name = Names.Segment
@@ -284,13 +284,5 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 		bullet.runAction(sequence)
 		
 		addChild(bullet)
-	}
-	
-	
-	private func isOccupied(row:Int, col:Int) -> Bool {
-		var point = positionToPoint(row, j: col)
-		var node = nodeAtPoint(point)
-		print("\(node.name)")
-		return node.name != Names.Mushroom // only mushrooms can occupy a space
 	}
 }

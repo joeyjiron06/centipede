@@ -13,16 +13,16 @@ struct CentipedeContants {
 	static let NAME = "Centipede"
 	static let kSegmentImageName = "segment"
 	static let kSpeed = CGFloat(150)
-	static let kSpeedPerMove = 0.125
+	static let kSpeedPerMove = 0.0625
 }
 
 
 class Centipede {
-	private let DEBUG_MOVES = false
 
 	private let TAG = "Centipede"
 	
 	private let model : Model
+	private var isMoving = false
 	
 	init(segments:Array<Segment>) {
 		model = Model(segments:segments)
@@ -43,60 +43,35 @@ class Centipede {
 	}
 	
 	func startMoving(direction:Direction) {
-		let head = getHead()
-		
-		if head.direction != direction {
-    		cancelAnims()
-			
-    		head.direction = direction
-    		
-    		nextMove()
-		} else if DEBUG_MOVES {
-    		nextMove()
+		if !isMoving {
+			isMoving = true
+			move()
 		}
 	}
 	
-	private func nextMove() {
-		//TODO refactor to use repeat action forever!
-		
-		let moves = createNextMoves()
-		
-		for (i, move) in enumerate(moves) {
-			if i==0 {
-				if DEBUG_MOVES {
-					model.segments[i].runAction(move)
-				} else {
-					model.segments[i].runAction(move, completion: self.nextMove)
-				}
-			} else {
-				model.segments[i].runAction(move)
-			}
+	func stopMoving() {
+		if isMoving {
+			cancelAnims()
+			isMoving = false
 		}
+	}
+	
+	private func move() {
+		for segment in model.segments {
+			moveSegment(segment)
+		}
+	}
+	
+	private func moveSegment(segment:Segment) {
+		let move = findNextMove(segment)
+		let action = SKAction.sequence([move, SKAction.runBlock( { self.moveSegment(segment) } )])
+		segment.runAction(action)
 	}
 	
 	private func cancelAnims() {
 		for segment in model.segments {
 			segment.removeAllActions()
 		}
-	}
-	
-	private func createNextMoves() -> [SKAction] {
-		let head = getHead()
-		
-		var moves = [SKAction]()
-		
-		for segment in model.segments {
-			if segment === head {
-				let move = findNextMove(segment)
-				moves.append(move)
-			} else {
-				let nextSegment = segment.getNext()
-				let move = makeMoveToSegment(segment, toSegment:nextSegment!)
-				moves.append(move)
-			}
-		}
-		
-		return moves
 	}
 	
 	private func makeMoveToSegment(fromSegment:Segment, toSegment:Segment) -> SKAction {
@@ -112,7 +87,6 @@ class Centipede {
 		
 		switch segment.direction {
 		case Direction.Down, Direction.Up:
-			//TODO take care of case when moving down or up just once, then left or right
 			nextMove = makeMoveInOppsiteIfPossible(segment)
 			break
 		
@@ -176,7 +150,7 @@ class Centipede {
 		let scene = segment.scene!
 		let point = nextPoint(segment, direction:direction)
 		let node = scene.nodeAtPoint(point)
-		return node.name == Names.Mushroom || node.name == Names.Segment
+		return node.name == Names.Mushroom
 	}
 	
 	private func willStayInBounds(segment:Segment, direction:Direction) -> Bool {
@@ -224,6 +198,11 @@ class Centipede {
 				return makeMoveInDirection(segment, direction: direction)
 			}
 			
+			if isMovePossible(segment, direction: direction.getOpposite()) {
+				let setDirOnCollide = { segment.setDirectionOnCollide(direction.getOpposite()) }
+				return makeMoveInDirection(segment, direction: direction.getOpposite(), doneBlock:setDirOnCollide)
+			}
+			
 			if isMovePossible(segment, direction: Direction.Right) {
 				let setDirOnCollide = { segment.setDirectionOnCollide(direction.getOpposite()) }
 				return makeMoveInDirection(segment, direction: Direction.Right, doneBlock:nil)
@@ -232,11 +211,6 @@ class Centipede {
 			if isMovePossible(segment, direction: Direction.Left) {
 				let setDirOnCollide = { segment.setDirectionOnCollide(direction.getOpposite()) }
 				return makeMoveInDirection(segment, direction: Direction.Left, doneBlock:nil)
-			}
-			
-			if isMovePossible(segment, direction: direction.getOpposite()) {
-				let setDirOnCollide = { segment.setDirectionOnCollide(direction.getOpposite()) }
-				return makeMoveInDirection(segment, direction: direction.getOpposite(), doneBlock:setDirOnCollide)
 			}
 			
 			
@@ -339,7 +313,7 @@ class Centipede {
 			
 			let angle = CGFloat(directionToAngle(direction).radians.value)
 			let rotate = SKAction.rotateToAngle(angle, duration: 0.0625, shortestUnitArc:true)
-			return SKAction.sequence([setDirection, SKAction.group([rotate, move]) ])
+			return SKAction.sequence([setDirection, SKAction.group([rotate, move])])
     	}
 	}
 }
