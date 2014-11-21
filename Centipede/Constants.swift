@@ -15,8 +15,11 @@ struct Categories {
     static let Segment : UInt32 = 1
     static let Bounds : UInt32 = (1 << 1)
     static let Mushroom : UInt32 = (1 << 2)
+	static let Bullet : UInt32 = (1 << 3)
     		
     static let SegmentAndMushroom =  Segment | Mushroom
+    static let BulletAndMushroom =  Bullet | Mushroom
+    static let BulletAndSegment =  Bullet | Segment
 }
 
 struct Names {

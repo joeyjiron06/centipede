@@ -10,8 +10,6 @@ import Foundation
 import SpriteKit
 
 struct CentipedeContants {
-	static let NAME = "Centipede"
-	static let kSegmentImageName = "segment"
 	static let kSpeed = CGFloat(150)
 	static let kSpeedPerMove = 0.0625
 }
@@ -258,6 +256,10 @@ class Centipede {
 	
 		func getDirection() -> Direction {
 			return direction
+		}
+		
+		func wasHitByBullet() {
+			self.texture = SKTexture(imageNamed: "segment_hit")
 		}
 	
 		private func getNext() -> Segment? {
