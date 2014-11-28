@@ -13,45 +13,25 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 	
 	let TAG = "GameScene"
 
-	//TODO move to constants
-	let kShipSize = CGSize(width:45, height:45)
-	let kBulletSize = CGSize(width:5, height:10)
 	let kNumberOfMushroomsInWidth = 20
-	var kMushroomSize : CGSize!
 	let kCentipedeNumNodes = 7
 	
-	private struct Bound {
-		static let Left = UInt8(0x1)
-		static let Right = UInt8(0x1 << 1)
-		static let Top = UInt8(0x1 << 2)
-		static let Bottom = UInt8(0x1 << 3)
-	}
-	
-	struct SceneObjNames {
-		static let kSpaceShip = "spaceship"
-		static let kSegment = "segment"
-	}
-	
-	private var mCentipedes : Array<Centipede> = []
-	private var mCentipede : Centipede!
-	private var up : SKSpriteNode!
-	private var down : SKSpriteNode!
-	private var left : SKSpriteNode!
-	private var right : SKSpriteNode!
+	private var mCentipedes = [Centipede]()
+	private var touchDidMove = false
 	
 	override func didMoveToView(view: SKView) {
 		setupPhysics()
 
 		createMushrooms()
-//		createArrows()
 		
 		let spaceShip = createNewSpaceShip()
 		addChild(spaceShip)
 
 		
-		mCentipede = createNewCentipede()
-		mCentipede.addToScene(self)
-//		mCentipedes.append(centipede)
+		let centipede = createNewCentipede()
+		centipede.addToScene(self)
+		centipede.startMoving(Direction.Right)
+		mCentipedes.append(centipede)
     }
 
 	func didBeginContact(contact: SKPhysicsContact) {
@@ -67,18 +47,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 			let bullet = getNode(contact, category:Categories.Bullet)
 			let segment = getNode(contact, category: Categories.Segment)
 			if bullet != nil && segment != nil {
-				bulletAndSementCollided(bullet!, segment: (segment as Centipede.Segment))
+				bulletAndSementCollided(bullet!, segment: (segment as Segment))
 			}
 		}
-	}
-	
-	private func getNode(contact:SKPhysicsContact, category:UInt32) -> SKNode? {
-		if contact.bodyA.categoryBitMask == category {
-			return contact.bodyA.node
-		} else if contact.bodyB.categoryBitMask == category {
-			return contact.bodyB.node
-		}
-		return nil
 	}
 	
 	private func bulletAndMushroomCollided(bullet:SKNode, mushroom:SKNode) {
@@ -88,30 +59,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 		mushroomSprite.wasHitByBulltet()
 	}
 	
-	private func bulletAndSementCollided(bullet:SKNode, segment:Centipede.Segment) {
+	private func bulletAndSementCollided(bullet:SKNode, segment:Segment) {
 		bullet.removeFromParent()
 		segment.wasHitByBullet()
 		//TODO split centipedes then continue moving...
 	}
 
-	
-	private func setupPhysics() {
-		let size = self.size.width / CGFloat(kNumberOfMushroomsInWidth)
-		kMushroomSize = CGSize(width:size , height:size)
-		
-		self.physicsWorld.gravity = CGVector.zeroVector
-		self.physicsWorld.contactDelegate = self
-		
-		// Now make the edges of the screen a physics object as well
-		self.physicsBody = SKPhysicsBody(edgeLoopFromRect:self.view!.frame)
-		self.physicsBody?.categoryBitMask = Categories.Bounds
-		self.physicsBody?.contactTestBitMask = Categories.Segment
-		self.physicsBody?.collisionBitMask = Categories.None
-	}
-	
-	
-	private var touchDidMove = false
-	
     override func touchesBegan(touches: NSSet, withEvent event: UIEvent) {
 		touchDidMove = false
 	}
@@ -127,73 +80,63 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 	}
 	
 	override func touchesEnded(touches: NSSet, withEvent event: UIEvent) {
-		
 		if !touchDidMove {
 			let spaceShip = getSpaceShip()
 			fire(spaceShip.position)
 		}
 	}
 	
-	private func onDirection(direction:Direction) {
-		mCentipede.startMoving(direction)
-	}
-
 	func positionToPoint(i:Int, j:Int) -> CGPoint {
-		let x = (CGFloat(j)*kMushroomSize.width) + (kMushroomSize.width/2)
-		let y = (CGFloat(i)*kMushroomSize.height) + (kMushroomSize.height)
+		let x = (CGFloat(j)*Sizes.Mushroom.width) + (Sizes.Mushroom.width/2)
+		let y = (CGFloat(i)*Sizes.Mushroom.height) + (Sizes.Mushroom.height)
 		return CGPoint(x:x, y:y)
 	}
 	
 	func pointToPosition(point:CGPoint) -> (i:Int, j:Int) {
-		let i = Int((point.y - kMushroomSize.height) / (kMushroomSize.height))
-		let j = Int((point.x - kMushroomSize.width/2) / kMushroomSize.width)
+		let i = Int((point.y - Sizes.Mushroom.height) / (Sizes.Mushroom.height))
+		let j = Int((point.x - Sizes.Mushroom.width/2) / Sizes.Mushroom.width)
 		return (i:i, j:j)
+	}
+
+/* - Get Methods */
+	
+	private func getNode(contact:SKPhysicsContact, category:UInt32) -> SKNode? {
+		if contact.bodyA.categoryBitMask == category {
+			return contact.bodyA.node
+		} else if contact.bodyB.categoryBitMask == category {
+			return contact.bodyB.node
+		}
+		return nil
 	}
 	
 	private func getMaxRows() -> Int {
-		return Int(size.height / kMushroomSize.height)
+		return Int(size.height / Sizes.Mushroom.height)
 	}
 	
 	private func getMaxCols() -> Int {
-		return Int(size.width / kMushroomSize.width)
+		return Int(size.width / Sizes.Mushroom.width)
+	}
+	
+	private func getSpaceShip() -> SKSpriteNode! {
+		let spaceShipSKNode = childNodeWithName(Names.SpaceShip)
+		return (spaceShipSKNode as? SKSpriteNode)
+	}
+	
+	private func setupPhysics() {
+		let size = self.size.width / CGFloat(kNumberOfMushroomsInWidth)
+		Sizes.Mushroom = CGSize(width:size , height:size)
+		
+		self.physicsWorld.gravity = CGVector.zeroVector
+		self.physicsWorld.contactDelegate = self
+		
+		// Now make the edges of the screen a physics object as well
+		self.physicsBody = SKPhysicsBody(edgeLoopFromRect:self.view!.frame)
+		self.physicsBody?.categoryBitMask = Categories.Bounds
+		self.physicsBody?.contactTestBitMask = Categories.Segment
+		self.physicsBody?.collisionBitMask = Categories.None
 	}
 	
 /* - Create Methods */
-	
-	private func createDebugMushrooms() {
-		let maxRows = getMaxRows()
-		let maxCols = getMaxCols()
-		
-		let startRow = maxRows-3
-		let endRow = maxRows-7
-		for row in endRow...startRow {
-			let mushroom = Mushroom(imageNamed:"mushroom")
-			mushroom.size = kMushroomSize
-			mushroom.setScale(0.75)
-			mushroom.name = Names.Mushroom
-			mushroom.physicsBody = SKPhysicsBody(rectangleOfSize: mushroom.size)
-//			mushroom.physicsBody = SKPhysicsBody(texture:SKTexture(imageNamed:"mushroom-physicsbody"), size: mushroom.size)
-			mushroom.physicsBody?.dynamic = false
-			mushroom.physicsBody?.categoryBitMask = Categories.Mushroom
-			mushroom.physicsBody?.contactTestBitMask = Categories.Segment
-			mushroom.physicsBody?.collisionBitMask = Categories.None
-			mushroom.position = positionToPoint(row, j:maxCols/2)
-			addChild(mushroom)
-		}
-		
-		let mushroom = Mushroom(imageNamed:"mushroom")
-		mushroom.size = kMushroomSize
-		mushroom.setScale(0.75)
-		mushroom.name = Names.Mushroom
-		mushroom.physicsBody = SKPhysicsBody(rectangleOfSize: mushroom.size)
-		//			mushroom.physicsBody = SKPhysicsBody(texture:SKTexture(imageNamed:"mushroom-physicsbody"), size: mushroom.size)
-		mushroom.physicsBody?.dynamic = false
-		mushroom.physicsBody?.categoryBitMask = Categories.Mushroom
-		mushroom.physicsBody?.contactTestBitMask = Categories.Segment
-		mushroom.physicsBody?.collisionBitMask = Categories.None
-		mushroom.position = positionToPoint(31, j:maxCols/2+2)
-		addChild(mushroom)
-	}
 	
 	private func createMushrooms() {
 		let maxRows = getMaxRows()
@@ -211,7 +154,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 				
 				if shouldAdd {
             		let mushroom = Mushroom(imageNamed:"mushroom")
-            		mushroom.size = kMushroomSize
+            		mushroom.size = Sizes.Mushroom
 					mushroom.setScale(0.75)
 					mushroom.name = Names.Mushroom
 					mushroom.physicsBody = SKPhysicsBody(texture:SKTexture(imageNamed:"mushroom-physicsbody"), size: mushroom.size)
@@ -226,108 +169,43 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 		}
 	}
 	
-	private func randBool(percentChance:UInt32) -> Bool {
-		let rand = arc4random() % 100
-		return rand < percentChance
-	}
-	
-	//TODO: remove arrows and function
-	private func createArrows() {
-		up = newArrow(CGPoint(x:80, y:kShipSize.height/2 + 70))
-		addChild(up)
-		
-		down = newArrow(CGPoint(x:80, y:kShipSize.height/2 + 10))
-		down.zRotation = CGFloat(Angle.Degrees(-180).radians.value)
-		addChild(down)
-		
-		left = newArrow(CGPoint(x:40, y:kShipSize.height/2 + 40))
-		left.zRotation = CGFloat(Angle.Degrees(90).radians.value)
-		addChild(left)
-
-		right = newArrow(CGPoint(x:120, y:kShipSize.height/2 + 40))
-		right.zRotation = CGFloat(Angle.Degrees(-90).radians.value)
-		addChild(right)
-	}
-	
-	private func newArrow(position:CGPoint) -> SKSpriteNode {
-		let spaceShip = SKSpriteNode(imageNamed:"arrow")
-		spaceShip.size = kShipSize
-		spaceShip.position = position
-		return spaceShip
-	}
-	
-	private func newSpaceShip(position:CGPoint) -> SKSpriteNode {
-		let spaceShip = SKSpriteNode(imageNamed:"Spaceship")
-		spaceShip.size = kShipSize
-		spaceShip.position = position
-		return spaceShip
-	}
-	
 	private func createNewSpaceShip() -> SKSpriteNode {
 		let scale : CGFloat = 0.25
 		let x : CGFloat = size.width/2.0
-		let y : CGFloat = kShipSize.height/2 + 20
+		let y : CGFloat = Sizes.SpaceShip.height/2 + 20
 		
 		let spaceShip = SKSpriteNode(imageNamed:"Spaceship")
-		spaceShip.name = SceneObjNames.kSpaceShip
-		spaceShip.size = kShipSize
+		spaceShip.name = Names.SpaceShip
+		spaceShip.size = Sizes.SpaceShip
 		spaceShip.position = CGPoint(x:x, y:y)
 
 		return spaceShip
 	}
 	
 	private func createNewCentipede() -> Centipede {
-		let segmentWidth = kMushroomSize.width
-		
-		let maxRows = Int(size.height / kMushroomSize.height)
-		let maxCols = Int(size.width / kMushroomSize.width)
+		let maxRows = Int(size.height / Sizes.Mushroom.height)
+		let maxCols = Int(size.width / Sizes.Mushroom.width)
 	
 		let startPoint = positionToPoint(maxRows-2, j:maxCols/2)
-
-		var segments : Array<Centipede.Segment> = []
-		var prevSegment : Centipede.Segment?
 		
-		for i in 0..<kCentipedeNumNodes {
-			let x = startPoint.x - (CGFloat(i)*segmentWidth)
-			let y = startPoint.y
-			let position = CGPoint(x: x, y: y)
-			
-			let segment = Centipede.Segment(imageNamed:"segment", direction:Direction.Right, nextSegment:prevSegment)
-			segment.size = kMushroomSize
-			segment.position = position
-			segment.name = Names.Segment
-			segment.physicsBody = SKPhysicsBody(circleOfRadius: segment.size.width/2)
-			segment.physicsBody?.dynamic = true
-			segment.physicsBody?.categoryBitMask = Categories.Segment
-			segment.physicsBody?.contactTestBitMask = Categories.Bounds
-			segment.physicsBody?.collisionBitMask = Categories.None
-			segment.physicsBody?.usesPreciseCollisionDetection = true
-			
-			prevSegment = segment
-
-			segments.append(segment)
-		}
-		
-		let centipede = Centipede(segments: segments)
-		
-		return centipede
+		return Centipede(numSegments: kCentipedeNumNodes, startPoint: startPoint)
 	}
 	
-	private func getSpaceShip() -> SKSpriteNode! {
-		let spaceShipSKNode = childNodeWithName(SceneObjNames.kSpaceShip)
-		return (spaceShipSKNode as? SKSpriteNode)
+	private func randBool(percentChance:UInt32) -> Bool {
+		let rand = arc4random() % 100
+		return rand < percentChance
 	}
 	
 	private func fire(startPosition:CGPoint) {
-		let bullet = SKShapeNode(rectOfSize: kBulletSize)
-		bullet.physicsBody = SKPhysicsBody(rectangleOfSize: kBulletSize)
+		let bullet = SKShapeNode(rectOfSize: Sizes.Bullet)
+		bullet.physicsBody = SKPhysicsBody(rectangleOfSize: Sizes.Bullet)
 		bullet.physicsBody?.categoryBitMask = Categories.Bullet
 		bullet.physicsBody?.contactTestBitMask = Categories.Mushroom | Categories.Segment
 		bullet.physicsBody?.collisionBitMask = Categories.None
 		bullet.fillColor = UIColor.purpleColor()
 		bullet.position = startPosition
 		
-		let moveAction = SKAction.moveToY(size.height+kBulletSize.height, duration: 2.0)
+		let moveAction = SKAction.moveToY(size.height+Sizes.Bullet.height, duration: 2.0)
 		let removeAction = SKAction.removeFromParent()
 		let sequence = SKAction.sequence([moveAction])
 		bullet.runAction(sequence)

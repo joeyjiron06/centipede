@@ -7,7 +7,14 @@
 //
 
 import Foundation
+import CoreGraphics
 
+struct Sizes {
+	static var Mushroom : CGSize!// = CGSize(width: 20, height: 20)
+	static var Segment = Mushroom
+	static let SpaceShip = CGSize(width:45, height:45)
+	static let Bullet = CGSize(width:5, height:10)
+}
 
 struct Categories {
     static let None : UInt32 = 0
@@ -23,6 +30,7 @@ struct Categories {
 }
 
 struct Names {
+	static let SpaceShip = "spaceship"
 	static let Mushroom = "mushroom"
 	static let Segment = "segment"
 }

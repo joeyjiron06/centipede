@@ -9,10 +9,7 @@
 import Foundation
 import SpriteKit
 
-
 class Mushroom : SKSpriteNode {
-	
-	
 	
 	private var health = 100
 	

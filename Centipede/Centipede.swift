@@ -10,7 +10,6 @@ import Foundation
 import SpriteKit
 
 struct CentipedeContants {
-	static let kSpeed = CGFloat(150)
 	static let kSpeedPerMove = 0.0625
 }
 
@@ -19,25 +18,54 @@ class Centipede {
 
 	private let TAG = "Centipede"
 	
-	private let model : Model
+	private var segments = [Segment]()
 	private var isMoving = false
 	
-	init(segments:Array<Segment>) {
-		model = Model(segments:segments)
+	init(numSegments:Int, startPoint:CGPoint) {
+		segments = createSegments(numSegments, startPoint:startPoint)
+	}
+	
+	private func createSegments(numSegments:Int, startPoint:CGPoint) -> [Segment] {
+		var segments = [Segment]()
+		
+		var prevSegment : Segment?
+		
+		for i in 0..<numSegments {
+			let x = startPoint.x - (CGFloat(i)*Sizes.Segment.width)
+			let y = startPoint.y
+			let position = CGPoint(x: x, y: y)
+			
+			let segment = Segment(imageNamed:"segment", direction:Direction.Right, nextSegment:prevSegment)
+			segment.size = Sizes.Segment
+			segment.name = Names.Segment
+			segment.position = position
+			segment.physicsBody = SKPhysicsBody(circleOfRadius: segment.size.width/2)
+			segment.physicsBody?.dynamic = true
+			segment.physicsBody?.categoryBitMask = Categories.Segment
+			segment.physicsBody?.contactTestBitMask = Categories.Bounds
+			segment.physicsBody?.collisionBitMask = Categories.None
+			segment.physicsBody?.usesPreciseCollisionDetection = true
+			
+			prevSegment = segment
+
+			segments.append(segment)
+		}
+		
+		return segments
 	}
 	
 	func addToScene(scene:SKScene) {
-		for (i, segment) in enumerate(model.segments) {
+		for segment in segments {
 			scene.addChild(segment)
 		}
 	}
 	
 	private func getHead() -> Segment {
-		return model.segments.first!
+		return segments.first!
 	}
 	
 	private func getTail() -> Segment {
-		return model.segments.last!
+		return segments.last!
 	}
 	
 	func startMoving(direction:Direction) {
@@ -55,7 +83,7 @@ class Centipede {
 	}
 	
 	private func move() {
-		for segment in model.segments {
+		for segment in segments {
 			moveSegment(segment)
 		}
 	}
@@ -67,7 +95,7 @@ class Centipede {
 	}
 	
 	private func cancelAnims() {
-		for segment in model.segments {
+		for segment in segments {
 			segment.removeAllActions()
 		}
 	}
@@ -217,105 +245,93 @@ class Centipede {
 		}
 		fatalError("could not find best move!")
 	}
+}
+
+class Segment : SKSpriteNode {
+	private var direction : Direction
+	private var mostRelevantPrevDirection : Direction?
+	private let nextSegment : Segment?
+	private var directionOnCollide = Direction.Down
 	
-/* - Model */
+	init(imageNamed:String, direction:Direction, nextSegment:Segment?) {
+		let texture = SKTexture(imageNamed:imageNamed)
+		self.direction = direction
+		self.nextSegment = nextSegment
+		super.init(texture: texture, color: UIColor.clearColor(), size: texture.size())
+	}
 	
-	private class Model {
-		let segments = [Segment]()
-		
-		init(segments:Array<Segment>) {
-			for segment in segments {
-				self.segments.append(segment)
-			}
+	required init(coder aDecoder: NSCoder) {
+		//TODO decode segment
+		direction = Direction.None
+		super.init(coder: aDecoder)
+	}
+	
+	override func encodeWithCoder(aCoder: NSCoder) {
+		//TODO encode segment
+		super.encodeWithCoder(aCoder)
+	}
+	
+	func getDirection() -> Direction {
+		return direction
+	}
+	
+	func wasHitByBullet() {
+		self.texture = SKTexture(imageNamed: "segment_hit")
+	}
+	
+	private func getNext() -> Segment? {
+		return nextSegment
+	}
+	
+	private func setDirectionOnCollide(direction:Direction) {
+		directionOnCollide = direction
+	}
+	
+	private func getDirectionOnCollide() -> Direction {
+		return directionOnCollide
+	}
+	
+	private func directionToAngle(direction:Direction) -> Angle {
+		switch direction {
+		case .Left:
+			return Angle.Degrees(-180)
+		case .Right:
+			return Angle.Degrees(0)
+		case .Up:
+			return Angle.Degrees(90)
+		case .Down:
+			return Angle.Degrees(-90)
+		default:
+			return Angle.Degrees(0)
 		}
 	}
 	
-	class Segment : SKSpriteNode {
-		private var direction : Direction
-		private var mostRelevantPrevDirection : Direction?
-		private let nextSegment : Segment?
-		private var directionOnCollide = Direction.Down
+	private func isRevelevatPrevDirection(direction:Direction) -> Bool {
+		return direction == Direction.Left || direction == Direction.Right
+	}
+	
+	private func createMoveAction(direction:Direction, dest:CGPoint) -> SKAction {
+		var move : SKAction!
 		
-		init(imageNamed:String, direction:Direction, nextSegment:Segment?) {
-			let texture = SKTexture(imageNamed:imageNamed)
+		if direction == Direction.Down || direction == Direction.Up {
+			let time = CentipedeContants.kSpeedPerMove
+			move = SKAction.moveToY(dest.y, duration:NSTimeInterval(time))
+		} else if direction == Direction.Left || direction == Direction.Right {
+			let time = CentipedeContants.kSpeedPerMove
+			move = SKAction.moveToX(dest.x, duration:NSTimeInterval(time))
+		} else {
+			fatalError("Segment : unhandled direction")
+		}
+		
+		let setDirection = SKAction.runBlock({
+			if self.isRevelevatPrevDirection(self.direction) {
+				self.mostRelevantPrevDirection = self.direction
+			}
 			self.direction = direction
-			self.nextSegment = nextSegment
-			super.init(texture: texture, color: UIColor.clearColor(), size: texture.size())
-		}
-
-		required init(coder aDecoder: NSCoder) {
-			//TODO decode segment
-			direction = Direction.None
-			super.init(coder: aDecoder)
-		}
+		})
 		
-		override func encodeWithCoder(aCoder: NSCoder) {
-			//TODO encode segment
-	        super.encodeWithCoder(aCoder)
-		}
-	
-		func getDirection() -> Direction {
-			return direction
-		}
-		
-		func wasHitByBullet() {
-			self.texture = SKTexture(imageNamed: "segment_hit")
-		}
-	
-		private func getNext() -> Segment? {
-			return nextSegment
-		}
-		
-		private func setDirectionOnCollide(direction:Direction) {
-			directionOnCollide = direction
-		}
-		
-		private func getDirectionOnCollide() -> Direction {
-			return directionOnCollide
-		}
-		
-		private func directionToAngle(direction:Direction) -> Angle {
-			switch direction {
-			case .Left:
-				return Angle.Degrees(-180)
-			case .Right:
-				return Angle.Degrees(0)
-			case .Up:
-				return Angle.Degrees(90)
-			case .Down:
-				return Angle.Degrees(-90)
-			default:
-				return Angle.Degrees(0)
-			}
-		}
-		
-		private func isRevelevatPrevDirection(direction:Direction) -> Bool {
-			return direction == Direction.Left || direction == Direction.Right
-		}
-		
-		private func createMoveAction(direction:Direction, dest:CGPoint) -> SKAction {
-    		var move : SKAction!
-    		
-    		if direction == Direction.Down || direction == Direction.Up {
-				let time = CentipedeContants.kSpeedPerMove
-				move = SKAction.moveToY(dest.y, duration:NSTimeInterval(time))
-    		} else if direction == Direction.Left || direction == Direction.Right {
-				let time = CentipedeContants.kSpeedPerMove
-				move = SKAction.moveToX(dest.x, duration:NSTimeInterval(time))
-			} else {
-				fatalError("Segment : unhandled direction")
-			}
-			
-			let setDirection = SKAction.runBlock({
-				if self.isRevelevatPrevDirection(self.direction) {
-					self.mostRelevantPrevDirection = self.direction
-				}
-				self.direction = direction
-			})
-			
-			let angle = CGFloat(directionToAngle(direction).radians.value)
-			let rotate = SKAction.rotateToAngle(angle, duration: 0.0625, shortestUnitArc:true)
-			return SKAction.sequence([setDirection, SKAction.group([rotate, move])])
-    	}
+		let angle = CGFloat(directionToAngle(direction).radians.value)
+		let rotate = SKAction.rotateToAngle(angle, duration: 0.0625, shortestUnitArc:true)
+		return SKAction.sequence([setDirection, SKAction.group([rotate, move])])
 	}
 }
